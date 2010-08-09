@@ -1,0 +1,5 @@
+Установка:
+
+Скопировать firstdata_payment_gateway в папку
+vendor/extensions и перезапустить spree.
+
