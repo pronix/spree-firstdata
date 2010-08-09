@@ -11,18 +11,16 @@ class FirstdataPaymentGatewayExtension < Spree::Extension
       include Spree::PaymentGateway
     end          
     
-    #silence_warnings { 
     require 'active_merchant/billing/first_data' 
-    #}
     
-    #register all payment methods
+    #register payment method
     [
       Gateway::FirstData
     ].each{|gw|
       begin
         gw.register  
       rescue Exception => e
-        $stderr.puts "Error registering gateway #{gw}: #{e}"
+        $stderr.puts "Error registering FirstData gateway #{gw}: #{e}"
       end
     }
   end

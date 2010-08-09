@@ -12,7 +12,6 @@ module ActiveMerchant #:nodoc:
     #                       globally and then you won't need to
     #                       include this option
     #
-    #
     # A valid store number is required. Unfortunately, with FirstData
     # YOU CAN'T JUST USE ANY OLD STORE NUMBER. Also, you can't just 
     # generate your own PEM file. You'll need to use a special PEM file 
@@ -21,10 +20,6 @@ module ActiveMerchant #:nodoc:
     # Go to http://www.firstdata.com/support/sup_teststore.asp to set up 
     # a test account and obtain your PEM file.
     #
-    # Declaring PEM file Globally
-    # ActiveMerchant::Billing::FirstData.pem_file = File.read( File.dirname(__FILE__) + '/../mycert.pem' )
-    # 
-    # 
     # Valid Order Options
     # :result => 
     #   LIVE                  Production mode
@@ -123,9 +118,12 @@ module ActiveMerchant #:nodoc:
       # 
       # ActiveMerchant::Billing::FirstDataGateway.pem_file = File.read( File.dirname(__FILE__) + '/../mycert.pem' )
       # 
+      # Set it from Spree admin interface
       cattr_accessor :pem_file
       
+      # Test accounts
       TEST_URL  = 'https://staging.linkpt.net:1129/'
+      # Live accounts
       LIVE_URL  = 'https://secure.linkpt.net:1129/'
       
       # We don't have the certificate to verify FirstData
@@ -133,7 +131,7 @@ module ActiveMerchant #:nodoc:
       
       self.supported_countries = ['US']
       self.supported_cardtypes = [:visa, :master, :american_express, :discover]
-      self.homepage_url = 'https://www.firstdata.com'
+      self.homepage_url = 'http://www.firstdata.com'
       self.display_name = 'FirstData'
            
       def initialize(options = {})
@@ -181,15 +179,6 @@ module ActiveMerchant #:nodoc:
         commit(money, creditcard, options)
       end
       
-      # Buy the thing
-      def purchase(money, creditcard, options={})
-        requires!(options, :order_id)
-        options.update(
-          :ordertype => "SALE"
-        )
-        commit(money, creditcard, options)
-      end
-      
       #
       # Authorize the transaction
       # 
@@ -217,6 +206,15 @@ module ActiveMerchant #:nodoc:
         commit(money, nil, options)  
       end
       
+      # Buy the thing
+      def purchase(money, creditcard, options={})
+        requires!(options, :order_id)
+        options.update(
+          :ordertype => "SALE"
+        )
+        commit(money, creditcard, options)
+      end
+      
       # Void a previous transaction
       def void(identification, options = {})
         options.update(
@@ -239,10 +237,6 @@ module ActiveMerchant #:nodoc:
         commit(money, nil, options)
       end
     
-      def test?
-        @options[:test] || super
-      end
-      
       private
       # Commit the transaction by posting the XML file to the FirstData server
       def commit(money, creditcard, options = {})
@@ -259,7 +253,11 @@ module ActiveMerchant #:nodoc:
       def successful?(response)
         response[:approved] == "APPROVED"
       end
-      
+
+      def test?
+        @options[:test] || super
+      end
+            
       # Build the XML file
       def post_data(money, creditcard, options)
         params = parameters(money, creditcard, options)
@@ -287,25 +285,6 @@ module ActiveMerchant #:nodoc:
         return xml.to_s
       end
 
-      # adds FirstData's Items entity to the XML.  Called from post_data
-      def build_items(element, items)
-        for item in items
-          item_element = element.add_element("item")
-          for key, value in item
-            if key == :options
-              options_element = item_element.add_element("options")
-              for option in value
-                opt_element = options_element.add_element("option")
-                opt_element.add_element("name").text =  option[:name]   unless option[:name].blank?
-                opt_element.add_element("value").text =  option[:value]   unless option[:value].blank?
-              end
-            else
-              item_element.add_element(key.to_s).text =  item[key].to_s unless item[key].blank?
-            end
-          end
-        end
-      end
-
       # Set up the parameters hash just once so we don't have to do it
       # for every action. 
       def parameters(money, creditcard, options = {})
@@ -326,7 +305,7 @@ module ActiveMerchant #:nodoc:
             :terminaltype => options[:terminaltype],
             :ip => options[:ip],
             :reference_number => options[:reference_number],
-            :recurring => options[:recurring] || "NO",  #DO NOT USE if you are using the periodic billing option. 
+            :recurring => options[:recurring] || "NO",  # DO NOT USE if you are using the periodic billing option. 
             :tdate => options[:tdate]
           },
           :orderoptions => {
@@ -400,6 +379,25 @@ module ActiveMerchant #:nodoc:
         params[:items] = options[:line_items] if options[:line_items]
         
         return params
+      end
+
+      # adds FirstData's Items entity to the XML.  Called from post_data
+      def build_items(element, items)
+        for item in items
+          item_element = element.add_element("item")
+          for key, value in item
+            if key == :options
+              options_element = item_element.add_element("options")
+              for option in value
+                opt_element = options_element.add_element("option")
+                opt_element.add_element("name").text =  option[:name]   unless option[:name].blank?
+                opt_element.add_element("value").text =  option[:value]   unless option[:value].blank?
+              end
+            else
+              item_element.add_element(key.to_s).text =  item[key].to_s unless item[key].blank?
+            end
+          end
+        end
       end
         
       def parse(xml)
